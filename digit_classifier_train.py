@@ -40,7 +40,7 @@ if __name__ == "__main__":
     loss_func = nn.CrossEntropyLoss()
     loss_list = []
 
-    for epoch in range(5):
+    for epoch in range(10):
         for images,labels in train_loader:
             images,labels = images.to(device), labels.to(device)
             optim.zero_grad()
