@@ -8,11 +8,7 @@ import pytesseract as pt
 def screenread(img, debug=False): #Takes in an image, outputs grid numbers and barriers.
     assert img is not None
 
-
-    
-    thresh = cv.threshold(img, 10, 255, cv.THRESH_BINARY_INV)
     thresh2 = cv.threshold(img, 200, 255, cv.THRESH_BINARY_INV)
-
 
     if debug and False:
         cv.imshow('',thresh[1])
@@ -37,7 +33,7 @@ def screenread(img, debug=False): #Takes in an image, outputs grid numbers and b
     best = None
     area_max = 0
 
-    for c in contours: #Finds largest "Square-like" contour
+    for c in contours: #Finds largest "Square-like" contour. Corresponds to puzzle grid.
         x, y, width, height = cv.boundingRect(c)
 
 
@@ -49,14 +45,16 @@ def screenread(img, debug=False): #Takes in an image, outputs grid numbers and b
             area_max = area
     
     x, y, width, height = best
-    cropped_img = img[y:y+height, x:x+width]
+    cropped_img = img[y:y+height, x:x+width] #Crops image to extract just the grid.
 
+    if debug:
+        print(f"Height and Width: {height}, {width}")
 
     if debug and False:
         cv.imshow('', cropped_img)
         cv.waitKey(0)
 
-    thresh_cropped = cv.threshold(cropped_img, 200, 256, cv.THRESH_BINARY_INV)
+    thresh_cropped = cv.threshold(cropped_img, 200, 255, cv.THRESH_BINARY_INV)
 
     if debug:
         cv.imshow('', thresh_cropped[1])
@@ -90,14 +88,55 @@ def screenread(img, debug=False): #Takes in an image, outputs grid numbers and b
     else:
         n = len(y_peaks) - 1
 
-    print(n)
+    if debug:
+        print(f"Detected grid size: {n}")
 
-    out = pt.image_to_string(thresh_cropped[1], lang='eng', config = r"--psm 12 --oem 3 -c tessedit_char_whitelist=0123456789")
+    #Hough Circles method. Documentation on OpenCV. TLDR: Uses edge gradient information to estimate circle centres. Approximately O(n^2). Might try my own implementation at some point.
+    #Utilises the fact that the digits in the "ZIP" puzzle are very nicely circled.
 
-    print(out)
+    circles = cv.HoughCircles(thresh_cropped[1], cv.HOUGH_GRADIENT, dp=1, minDist=(width/(n*2)), param1=200, param2 = 15, minRadius=5, maxRadius= 32)
+
+    if debug and False:
+        for (x,y,r) in circles[0]:
+            cv.circle(thresh_cropped[1], (int(x),int(y)), int(r), (0, 0, 255), 2)
+        
+        cv.imshow("", thresh_cropped[1])
+        cv.waitKey(0)
+
+    if circles is not None:
+        circles = circles[0].astype("int") #Integers
+        ctr = 0
+        for (x,y,r) in circles:
+            r = int(r*0.7) #Slight padding
+            digit = thresh_cropped[1][y-r:y+r, x-r:x+r]
+
+            digit = cv.bitwise_not(digit)
+            digit = cv.resize(digit, dsize=None, fx=4, fy=4)
+
+            digit_dialated = cv.dilate(digit, np.ones((4,4), np.uint8), iterations=1)
+
+            cv.imshow("", digit_dialated)
+            cv.waitKey(0)
+
+            cv.imwrite(f"digit{ctr}.png", digit_dialated)
+
+            config = r'--psm 8 --oem 3 -c tessedit_char_whitelist=0123456789'
+
+            digit_val = None
+
+            digit_val = pt.image_to_string(digit_dialated, config=config)
+
+            print(digit_val)
+
+
+            cv.imshow("", digit)
+            cv.waitKey(0)
+            ctr+=1
 
 
 
 
-img = cv.imread('test_screenshot.png', cv.IMREAD_GRAYSCALE)
+
+
+img = cv.imread('test_screenshot_2.png', cv.IMREAD_GRAYSCALE)
 screenread(img, debug=True)
