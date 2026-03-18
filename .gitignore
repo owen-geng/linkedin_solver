@@ -1,6 +1,7 @@
 __pycache__/
 .vscode/
 venv/
-test_screenshot_2.png
-test_screenshot.png
+test_screenshots/
 data/
+digits_training/
+ziptests.txt

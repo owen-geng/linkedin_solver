@@ -1,3 +1,4 @@
+
 import cv2 as cv
 import numpy as np
 import random
@@ -5,7 +6,7 @@ from matplotlib import pyplot as plt
 import scipy.signal as signal
 import pytesseract as pt
 
-def screenread(img, debug=False): #Takes in an image, outputs grid numbers and barriers.
+def detect_grid(img, debug=False): #Takes in an image, outputs grid numbers and barriers.
     assert img is not None
 
     thresh2 = cv.threshold(img, 200, 255, cv.THRESH_BINARY_INV)
@@ -90,53 +91,5 @@ def screenread(img, debug=False): #Takes in an image, outputs grid numbers and b
 
     if debug:
         print(f"Detected grid size: {n}")
-
-    #Hough Circles method. Documentation on OpenCV. TLDR: Uses edge gradient information to estimate circle centres. Approximately O(n^2). Might try my own implementation at some point.
-    #Utilises the fact that the digits in the "ZIP" puzzle are very nicely circled.
-
-    circles = cv.HoughCircles(thresh_cropped[1], cv.HOUGH_GRADIENT, dp=1, minDist=(width/(n*2)), param1=200, param2 = 15, minRadius=5, maxRadius= 32)
-
-    if debug and False:
-        for (x,y,r) in circles[0]:
-            cv.circle(thresh_cropped[1], (int(x),int(y)), int(r), (0, 0, 255), 2)
-        
-        cv.imshow("", thresh_cropped[1])
-        cv.waitKey(0)
-
-    if circles is not None:
-        circles = circles[0].astype("int") #Integers
-        ctr = 0
-        for (x,y,r) in circles:
-            r = int(r*0.7) #Slight padding
-            digit = thresh_cropped[1][y-r:y+r, x-r:x+r]
-
-            digit = cv.bitwise_not(digit)
-            digit = cv.resize(digit, dsize=None, fx=4, fy=4)
-
-            digit_dialated = cv.dilate(digit, np.ones((4,4), np.uint8), iterations=1)
-
-            cv.imshow("", digit_dialated)
-            cv.waitKey(0)
-
-            cv.imwrite(f"digit{ctr}.png", digit_dialated)
-
-            config = r'--psm 8 --oem 3 -c tessedit_char_whitelist=0123456789'
-
-            digit_val = None
-
-            digit_val = pt.image_to_string(digit_dialated, config=config)
-
-            print(digit_val)
-
-
-            cv.imshow("", digit)
-            cv.waitKey(0)
-            ctr+=1
-
-
-
-
-
-
-img = cv.imread('test_screenshot_2.png', cv.IMREAD_GRAYSCALE)
-screenread(img, debug=True)
+    
+    return n, thresh_cropped, (x,y,width,height)
