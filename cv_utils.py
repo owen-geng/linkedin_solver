@@ -11,15 +11,13 @@ def detect_grid(img, debug=False): #Takes in an image, outputs grid numbers and 
 
     thresh2 = cv.threshold(img, 200, 255, cv.THRESH_BINARY_INV)
 
-    if debug and False:
-        cv.imshow('',thresh[1])
-        cv.waitKey(0)
+    if debug:
         cv.imshow('', thresh2[1])
         cv.waitKey(0)
 
-    contours, _ = cv.findContours(thresh2[1], cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE) #Finds contours from image
+    contours, heirarchy = cv.findContours(thresh2[1], cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE) #Finds contours from image
 
-    if debug and False:
+    if debug:
         
         draw = np.zeros((thresh2[1].shape[0], thresh2[1].shape[1], 3), dtype=np.uint8)
 
@@ -51,7 +49,7 @@ def detect_grid(img, debug=False): #Takes in an image, outputs grid numbers and 
     if debug:
         print(f"Height and Width: {height}, {width}")
 
-    if debug and False:
+    if debug:
         cv.imshow('', cropped_img)
         cv.waitKey(0)
 
@@ -60,17 +58,6 @@ def detect_grid(img, debug=False): #Takes in an image, outputs grid numbers and 
     if debug:
         cv.imshow('', thresh_cropped[1])
         cv.waitKey(0)
-
-    if debug and False:
-        draw = np.zeros((cropped_img.shape[0], cropped_img.shape[1], 3), dtype=np.uint8)
-
-        for i in range(len(new_contours)):
-            colour = (random.randint(0,256), random.randint(0,256), random.randint(0,256))
-            cv.drawContours(draw, new_contours, i, colour, 2, cv.LINE_8, heir, 0)
-        
-        cv.imshow('', draw)
-        cv.waitKey(0)
-
 
     y_proj = np.mean(thresh_cropped[1], axis=0)
     x_proj = np.mean(thresh_cropped[1], axis=1)
