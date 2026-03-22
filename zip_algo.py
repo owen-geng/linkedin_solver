@@ -200,7 +200,7 @@ def full_solve():
 
     return ins
 
-
+""" Legacy testing code
     
 if __name__ == "__main__":
     
@@ -213,4 +213,6 @@ if __name__ == "__main__":
         pass
     keystrokes(ins)
     print("Complete")
+
     
+"""

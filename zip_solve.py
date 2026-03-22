@@ -140,7 +140,8 @@ def zip_solve(img, debug=False):
     map = map = np.zeros([n,n])
     for digit in digit_loc:
         map[digit[1]][digit[2]] = digit[0]
-    # solve() expects barrier_x as n*(n-1) (strip last col) and barrier_y as n*(n-1) (strip last row)
+
+    #Strip last row and column for barrier_x and barrier_y inputs.
     bx = bitarray(n * (n - 1))
     for r in range(n):
         bx[r*(n-1):(r+1)*(n-1)] = barrier_x[r*n:r*n+(n-1)]
