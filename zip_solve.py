@@ -1,12 +1,12 @@
 import cv2 as cv
 import numpy as np
+from bitarray import bitarray
 import random
-from matplotlib import pyplot as plt
-import scipy.signal as signal
-import pytesseract as pt
 from cv_utils import detect_grid
-import time
 from zip_inference import predict_digit
+from zip_algo import print_bitarray
+from zip_algo import solve
+from zip_algo import inputs
 
 def zip_screenread(img, debug=False): #Takes in an image, outputs grid numbers and barriers.
     assert img is not None
@@ -90,29 +90,62 @@ def zip_screenread(img, debug=False): #Takes in an image, outputs grid numbers a
         cv.waitKey(0)
 
         
-    contours = [cnt for cnt in contours if len(cnt)<=50]
-    for cnt in contours:
-        print("Contour: ")
-        print(len(cnt))
-        print(cnt)
+    h_img, w_img = thresh2_cropped[1].shape
+    COVERAGE_THRESHOLD = 0.3
+    strip_half = max(2, int(min(vert_spacing, horiz_spacing) * 0.15))
 
-    
+    barrier_x = bitarray(n * n)  # vertical barriers:   barrier_x[row*n+col] between (row,col)-(row,col+1), last col always 0
+    barrier_y = bitarray(n * n)  # horizontal barriers: barrier_y[row*n+col] between (row,col)-(row+1,col), last row always 0
+    barrier_x.setall(0)
+    barrier_y.setall(0)
 
+    contour_mask = np.zeros((h_img, w_img), dtype=np.uint8)
+    cv.drawContours(contour_mask, contours, -1, 255, thickness=cv.FILLED)
 
-    return digit_loc, None
+    for r in range(n - 1):
+        edge_y = int(round((r + 1) * vert_spacing))
+        y0 = max(0, edge_y - strip_half)
+        y1 = min(h_img, edge_y + strip_half)
+        for col in range(n):
+            x0 = int(round(col * horiz_spacing))
+            x1 = int(round((col + 1) * horiz_spacing))
+            strip = contour_mask[y0:y1, x0:x1]
+            if strip.sum() / (strip.size * 255 + 1e-9) >= COVERAGE_THRESHOLD:
+                barrier_y[r * n + col] = True
+
+    for c in range(n - 1):
+        edge_x = int(round((c + 1) * horiz_spacing))
+        x0 = max(0, edge_x - strip_half)
+        x1 = min(w_img, edge_x + strip_half)
+        for row in range(n):
+            y0 = int(round(row * vert_spacing))
+            y1 = int(round((row + 1) * vert_spacing))
+            strip = contour_mask[y0:y1, x0:x1]
+            if strip.sum() / (strip.size * 255 + 1e-9) >= COVERAGE_THRESHOLD:
+                barrier_x[row * n + c] = True
+
+    if debug:
+        print("barrier_x:")
+        print_bitarray(barrier_x, n)
+        print("barrier_y:")
+        print_bitarray(barrier_y, n)
+
+    return digit_loc, (barrier_x, barrier_y), n
 
 
 
 def zip_solve(img, debug=False):
 
-    digit_loc, barrier_loc = zip_screenread(img, debug)
-    print(digit_loc)
+    digit_loc, (barrier_x, barrier_y), n = zip_screenread(img, debug)
+    map = map = np.zeros([n,n])
+    for digit in digit_loc:
+        map[digit[1]][digit[2]] = digit[0]
+    # solve() expects barrier_x as n*(n-1) (strip last col) and barrier_y as n*(n-1) (strip last row)
+    bx = bitarray(n * (n - 1))
+    for r in range(n):
+        bx[r*(n-1):(r+1)*(n-1)] = barrier_x[r*n:r*n+(n-1)]
+    by = barrier_y[:n * (n - 1)]
+    path, ctr = solve(map, n, bx, by)
 
+    return inputs(path, n), ctr
 
-
-
-start = time.time()
-img = cv.imread('test_screenshots/zip/test_screenshot_3.png', cv.IMREAD_GRAYSCALE)
-zip_solve(img, debug=True)
-
-print(time.time()-start)
