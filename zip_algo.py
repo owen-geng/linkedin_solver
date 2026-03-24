@@ -48,7 +48,9 @@ def solve(map, n, bar_x = None, bar_y = None):
     for i in range(int(map.max())):
         x, y = np.where(map == i+1)
         temp = bitarray(n*n)
-        ind = x[0]*n + y[0]
+        ind = x*n + y
+        ind = ind[0]
+        
         temp[ind] = True
 
         if (i==0):

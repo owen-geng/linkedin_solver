@@ -35,6 +35,7 @@ def zip_screenread(img, debug=False): #Takes in an image, outputs grid numbers a
     
     digit_loc = []
     sanity = []
+    confidence_list = []
 
     if circles is not None:
         circles = circles[0].astype("int") #Integers
@@ -47,7 +48,7 @@ def zip_screenread(img, debug=False): #Takes in an image, outputs grid numbers a
             digit = cv.resize(digit, dsize=None, fx=4, fy=4)            
             digit_dialated = cv.dilate(digit, np.ones((4,4), np.uint8), iterations=1)
             
-            if debug and False:
+            if debug:
                 cv.imshow("", digit_dialated)
                 cv.waitKey(0)
                 ctr+=1
@@ -58,7 +59,7 @@ def zip_screenread(img, debug=False): #Takes in an image, outputs grid numbers a
             row_ind = (y)//vert_spacing
             col_ind = (x)//horiz_spacing
 
-            if debug and False:
+            if debug:
                 print(f"Digit val: {digit_val}")
                 print(f"Confidence: {confidence}")
                 print(f"row: {row_ind}, col: {col_ind}")
@@ -66,12 +67,23 @@ def zip_screenread(img, debug=False): #Takes in an image, outputs grid numbers a
             if digit_val != "":
                 digit_loc.append((int(digit_val), int(row_ind), int(col_ind)))
                 sanity.append(int(digit_val))
-        
+                confidence_list.append(confidence)
+
     sanity_set = set(sanity)
     if len(sanity) == max(sanity) == len(sanity_set):
         pass
     else:
-        raise ValueError("Some digits were recognised incorrectly or missed.")
+        print("Some digits were recognised incorrectly. Attempting to patch.")
+        err_val = None
+        
+        for i in range(1,len(sanity)+1):
+            if i not in sanity:
+                err_val = i
+        #Unpack tuple
+        old_digit, row_err, col_err = digit_loc[np.argmin(confidence_list)]
+        digit_loc[np.argmin(confidence_list)] = (err_val, row_err, col_err)
+        print(f"Error found: Old digit: {old_digit}, new digit: {err_val}")
+
     
 
     #Digit locating and recognition complete. Now for barrier recognition.
